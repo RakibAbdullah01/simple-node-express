@@ -55,6 +55,25 @@ async function run(){
             res.json(service)
         })
 
+        //Update Api
+        app.put('/services/:id',async(req,res)=>{
+            const id = req.params.id;
+            const filter  = {_id:ObjectId(id)}
+            const options = { upsert: true };
+
+            const updateDoc = {
+                $set:{
+                    name: req.body.name,
+                    price: req.body.price
+                },
+            };
+            const result = await servicesCollection.updateOne(filter, updateDoc, options);
+            
+            console.log(result);
+            res.json(result);
+        })
+        
+
         // Delete api
         app.delete('/services/:id',async(req,res)=>{
             const id = req.params.id;
