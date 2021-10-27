@@ -1,65 +1,85 @@
-const express = require('express')
-const app = express();
-var cors = require('cors')
-const port = process.env.PORT || 5000
+const exporess = require('express')
+const app = exporess();
 
+const cors = require('cors')
 app.use(cors())
-app.use(express.json())
+app.use(exporess.json())
+
+const { MongoClient } = require('mongodb');
+require('dotenv').config();
+
+const ObjectId = require('mongodb').ObjectId;
+
+const port = 5000
 
 
-app.get('/',(req,res)=>{
-    res.send('This is Node and Exploring Node Mon')
-})
+// URI
+const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.ed7sj.mongodb.net/myFirstDatabase?retryWrites=true&w=majority`;
 
-const users = [
-    {id:1,name:'rakib',email:'arakib42@yahoo.com',phone:0178888888},
-    {id:2,name:'Rajib',email:'arakib42@yahoo.com',phone:0178888888},
-    {id:3,name:'rohim',email:'arakib42@yahoo.com',phone:0178888888},
-    {id:4,name:'rejun',email:'arakib42@yahoo.com',phone:0178888888},
-    {id:5,name:'razzak',email:'arakib42@yahoo.com',phone:0178888888},
-    {id:6,name:'rupali',email:'arakib42@yahoo.com',phone:0178888888}
-]
 
-app.get('/users',(req,res)=>{
-    const search = req.query.search;
-    if (search){
-        const searchResult = users.filter(user=>user.name.toLocaleLowerCase().includes(search))
-        res.send(searchResult);
-    }else{
-        res.send(users)
+// Create Mongo CLient
+const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true });
+
+// Connection to Sarver
+async function run(){
+    try{
+        await client.connect()
+        
+        const database = client.db("carMechanic");
+        const servicesCollection = database.collection("services");
+
+        // Get all data
+        app.get('/services',async(req,res)=>{
+            const cursor = servicesCollection.find({})
+            const services = await cursor.toArray();
+            res.send(services)
+        })
+
+        // Get Single Service
+        app.get('/services/:id',async(req,res)=>{
+            const id = req.params.id;
+            const query = {_id:ObjectId(id)}
+
+            const service = await servicesCollection.findOne(query);
+
+            res.json(service);
+
+        })
+
+
+        // Post Api
+        app.post('/services',async(req,res)=>{
+            const service = req.body;
+            console.log("Hit the post api",service);
+            const result = await servicesCollection.insertOne(service);
+            res.json(service)
+        })
+
+        // Delete api
+        app.delete('/services/:id',async(req,res)=>{
+            const id = req.params.id;
+            const query = {_id:ObjectId(id)}
+
+            const result = await servicesCollection.deleteOne(query)
+
+            res.json(result)
+            console.log('Deleted');
+        })
+
+       
+
+
+    }finally{
+        // await client.close();
     }
-})
-// Post Data
-app.post('/users',(req,res)=>{
-    const newUser = req.body;
-    newUser.id = users.length + 1;
-    users.push(newUser);
-
-    console.log('hitting the post',req.body);
-    // res.send('inside post')
-    res.json(newUser)
-})
+}
+run().catch(console.dir);
 
 
-
-
-
-
-
-app.get('/users/:id',(req,res)=>{
-    const id = req.params.id;
-    const user = users[id]
-    res.send(user);
-})
-
-app.get('/fruits',(req,res)=>{
-    res.send(['mango','orange','banana'])
-})
-
-app.get('/fruits/mango/fazli',(req,res)=>{
-    res.send('Yemmy Yemmy Fojli')
+app.get('/',async(req,res)=>{
+    res.send("It's Working")
 })
 
 app.listen(port,()=>{
-    console.log('Listing to port', port);
+    console.log("Hitting on the port",port);
 })
